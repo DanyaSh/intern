@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-app
+  labels:
+    app: web-app
+spec:
+  replicas: 4  # Четыре реплики для обработки пиковой нагрузки
+  selector:
+    matchLabels:
+      app: web-app
+  template:
+    metadata:
+      labels:
+        app: web-app
+    spec:
+      containers:
+      - name: web-app
+        image: your-web-app-image:latest
+        resources:
+          requests:
+            memory: "128Mi"  # Запросы на память
+            cpu: "1"         # Запросы на CPU для первых запросов
+          limits:
+            memory: "128Mi"  # Лимиты на память (остаются постоянными)
+            cpu: "0.1"       # Лимиты на CPU (остаются постоянными)
+        readinessProbe:
+          httpGet:
+            path: /healthz  # Путь для проверки готовности приложения
+            port: 80
+          initialDelaySeconds: 10  # Первоначальная задержка перед проверкой готовности
+          periodSeconds: 5         # Периодичность проверок готовности
+        livenessProbe:
+          httpGet:
+            path: /healthz  # Путь для проверки жизнеспособности приложения
+            port: 80
+          initialDelaySeconds: 30  # Первоначальная задержка перед проверкой жизнеспособности
+          periodSeconds: 10        # Периодичность проверок жизнеспособности
+        lifecycle:
+          preStop:
+            exec:
+              command: ["your-pre-stop-script.sh"]  # Скрипт для предостановки работы перед остановкой контейнера
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0  # Не допускаем недоступности подов при обновлении
+  revisionHistoryLimit: 10  # Храним историю до 10 ревизий
